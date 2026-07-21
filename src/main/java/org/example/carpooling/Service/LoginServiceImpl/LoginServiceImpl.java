@@ -7,11 +7,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Service
 public class LoginServiceImpl implements LoginService {
-    @GetMapping("/users")
     @Override
     public int login(LoginForm loginForm){
         System.out.println(loginForm.toString());
-        return 0;
+        return 1;
     }
 
 
