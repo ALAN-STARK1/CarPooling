@@ -18,10 +18,19 @@ const router = useRouter()
 const timeRange = ref([])
 
 function handleSubmitOrder(){
-  submitOrder(timeRange.value)
-  if(res === null){
-    console.log("提交异常")
+  submitOrder({
+    boardingPoint: boardingPoint.value,
+    dropOffPoint: dropOffPoint.value,
+    timeRange: timeRange.value,
+  })
+  if(res.data.success){
+    console.log("提交成功");
   }
+  else{
+    console.log("系统异常:" + error);
+  }
+
+
 }
 
 </script>

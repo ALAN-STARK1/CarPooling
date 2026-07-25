@@ -2,9 +2,10 @@
 
   import {ref} from "vue"
 
-  import {login} from "../api/user.js"
+  import {login, register} from "../api/user.js"
 
   import {useRouter} from "vue-router"
+
 
   const username = ref("")
 
@@ -14,37 +15,51 @@
 
   const router = useRouter()
 
+  function handleRegister() {
+
+    register({
+      username: username.value,
+      password: password.value,
+    })
+        .then(res => {
+          if (res.data.success) {
+            message.value = "注册成功"
+          } else {
+            message.value = res.data.errorMsg || "注册失败";
+          }
+        })
+        .catch(error => {
+          console.log("注册异常：",error);
+          message.value = "系统繁忙，注册失败"
+        })
+
+  }
+
   function handleLogin() {
 
     login({
-
       username: username.value,
-
       password: password.value,
     })
     .then(res => {
-
-      if(res.data === 1){
+      const result = res.data
+      if (result.success) {
         message.value = "登录成功"
-        const token  = res.data.token;
+        const data = result.data
 
-        localStorage.setItem("user_token", token);
+        localStorage.setItem("user_token", data.token)
+        localStorage.setItem("user_info", JSON.stringify(data.user))
         alert('登录成功')
 
         router.push("/home")
       } else {
-        message.value = res.data.msg || "用户名或密码错误";
+        message.value = result.errorMsg || "用户名或密码错误";
       }
-
-      console.log(res.data)
-
-
     })
-        .catch(error=>{
-          console.log(error)
-          message.value =
-              "登录失败"
-        })
+    .catch(error => {
+      console.log("登录异常：",error);
+      message.value = "系统繁忙，登录失败"
+    })
 
   }
 
@@ -71,6 +86,8 @@
     />
 
     <br>
+
+    <button @click = "handleRegister">注册</button>
 
     <button @click = "handleLogin">登录</button>
 

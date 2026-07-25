@@ -1,4 +1,4 @@
-package org.example.carpooling.Entity;
+package org.example.carpooling.entity;
 
 import lombok.Data;
 

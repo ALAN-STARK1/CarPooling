@@ -1,4 +1,4 @@
-package org.example.carpooling.Entity;
+package org.example.carpooling.entity;
 
 import lombok.Data;
 
@@ -6,7 +6,7 @@ import java.util.Date;
 
 @Data
 public abstract class Order {
-    int id;
+    Long id;
     String state;
 
     Date creationDate;

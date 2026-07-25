@@ -1,11 +1,9 @@
-import axios from "axios";
+import request from './request.js'
 
+export function login(data) {
+  return request.post('/user/login', data)
+}
 
-export function login(data){
-
-    return axios.post(
-        "http://localhost:8080/user/login",
-        data
-    )
-
+export function register(data) {
+  return request.post('/user/register', data)
 }
