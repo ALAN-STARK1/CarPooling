@@ -5,37 +5,151 @@ import {login} from "../api/user.js"
 
 import {useRouter} from "vue-router"
 
+import {suggestPlaces} from "@/api/map";
+
 const boardingPoint = ref("")
 
 const dropOffPoint = ref("")
-
-const startTime = ref("")
-
-const endTime = ref("")
 
 const router = useRouter()
 
 const timeRange = ref([])
 
-const selectedProvince = ref("")
+const selectedProvince1 = ref("")
 
-const selectedCity = ref("")
+const selectedCity1 = ref("")
+
+const selectedProvince2 = ref("")
+
+const selectedCity2 = ref("")
+
+// 候选列表
+const boardingCandidates = ref([])
+// 精确起点
+const boardingExact = ref(null)
+
+const boardingSearching = ref(false)
 
 const provinces = computed(() =>
-  Object.entries(data).map(([code,v]) => ({code, name: v.name}))
+  Object.entries(data).map(([code, v]) => ({ code, name: v.name }))
 )
 
-const cities = computed(() => {
-  if(!selectedProvince.value) return []
-  return Object.entries(data[selectedProvince.value].cities).map(
-      ([code,name]) => ({code, name})
+/** 上车点：当前省下的城市列表 */
+const cities1 = computed(() => {
+  if (!selectedProvince1.value) return []
+  return Object.entries(data[selectedProvince1.value].cities).map(
+    ([code, name]) => ({ code, name })
   )
-    }
-)
+})
 
-function onProvinceChange(){
-  selectedCity.value = ''
+/** 下车点：当前省下的城市列表 */
+const cities2 = computed(() => {
+  if (!selectedProvince2.value) return []
+  return Object.entries(data[selectedProvince2.value].cities).map(
+    ([code, name]) => ({ code, name })
+  )
+})
+
+/** 传给百度的城市名，如「上海」 */
+const boardingCityName = computed(() => {
+  if (!selectedProvince1.value || !selectedCity1.value) return ''
+  return data[selectedProvince1.value].cities[selectedCity1.value] || ''
+})
+
+function onProvince1Change() {
+  selectedCity1.value = ''
+  boardingCandidates.value = []
+  boardingExact.value = null
 }
+
+function onProvince2Change() {
+  selectedCity2.value = ''
+}
+
+async function searchDropOffPlace() {
+  if(!DropOffCityName.value){
+    {alert('请先选择省市');return}
+  }
+  if(!DropOffPoint.value.trim()){
+    alert('请输入上车点');return
+  }
+
+  dropOffSearching.value = true
+  boardingExact.value = null
+  boardingCandidates.value = []
+
+  try{
+    const res = await suggestPlaces(boardingPoint.value.trim(),boardingCityName.value)
+    const payload = res.data
+    boardingCandidates.value = payload?.success ? (payload.data || []) : []
+
+    if(!boardingCandidates.value.length) {
+      alert('未在「' + boardingCityName.value + '」找到匹配地点，请换关键词重试')
+    }
+  } catch (e) {
+    boardingCandidates.value = []
+    alert('搜索失败，请稍后重试')
+  } finally {
+    boardingSearching.value = false
+  }
+
+}
+
+function selectBoardingPlace(item) {
+  boardingExact.value = {
+    name: item.name,
+    address: item.address,
+    lng: item.lng,
+    lat:item.lat,
+    city:item.city,
+  }
+  boardingPoint.value = item.name
+  // boardingCandidates.value = []
+
+}
+
+async function searchBoardingPlace() {
+  if(!boardingCityName.value){
+    {alert('请先选择省市');return}
+  }
+  if(!boardingPoint.value.trim()){
+    alert('请输入上车点');return
+  }
+
+  boardingSearching.value = true
+  boardingExact.value = null
+  boardingCandidates.value = []
+
+  try{
+    const res = await suggestPlaces(boardingPoint.value.trim(),boardingCityName.value)
+    const payload = res.data
+    boardingCandidates.value = payload?.success ? (payload.data || []) : []
+
+    if(!boardingCandidates.value.length) {
+      alert('未在「' + boardingCityName.value + '」找到匹配地点，请换关键词重试')
+    }
+  } catch (e) {
+    boardingCandidates.value = []
+    alert('搜索失败，请稍后重试')
+  } finally {
+    boardingSearching.value = false
+  }
+
+}
+
+function selectBoardingPlace(item) {
+  boardingExact.value = {
+    name: item.name,
+    address: item.address,
+    lng: item.lng,
+    lat:item.lat,
+    city:item.city,
+  }
+  boardingPoint.value = item.name
+  // boardingCandidates.value = []
+
+}
+
 
 const data = {
   11: { name: '北京', cities: { 1101: '北京市' } },
@@ -477,77 +591,86 @@ const data = {
   82: { name: '澳门', cities: { 8201: '澳门' } }
 }
 
-function handleSubmitOrder(){
-  submitOrder({
-    boardingPoint: boardingPoint.value,
-    dropOffPoint: dropOffPoint.value,
-    timeRange: timeRange.value,
-  })
-  if(res.data.success){
-    console.log("提交成功");
-  }
-  else{
-    console.log("系统异常:" + error);
-  }
-
-
-}
-
 </script>
 
 <template>
-  <div class="selector1">
-    <select v-model="selectedProvince" @change="onProvinceChange">
-      <option value="">请选择省份</option>
-      <option v-for="p in provinces" :key="p.code" :value="p.code">
-        {{ p.name }}
-      </option>
-    </select>
+  <div class="home-page">
+    <div class="selector1">
+      <select v-model="selectedProvince1" @change="onProvince1Change">
+        <option value="">请选择省份</option>
+        <option v-for="p in provinces" :key="p.code" :value="p.code">
+          {{ p.name }}
+        </option>
+      </select>
 
-    <select v-model="selectedCity" :disabled="!cities.length">
-      <option value="">请选择城市</option>
-      <option v-for="c in cities" :key="c.code" :value="c.code">
-        {{ c.name }}
-      </option>
-    </select>
-  </div>
+      <select v-model="selectedCity1" :disabled="!cities1.length">
+        <option value="">请选择城市</option>
+        <option v-for="c in cities1" :key="c.code" :value="c.code">
+          {{ c.name }}
+        </option>
+      </select>
+    </div>
 
-
-  <input v-model="boardingPoint" :disabled="!cities.length" placeholder="请输入上车点"/>
-
-  <div class="selector2">
-    <select v-model="selectedProvince" @change="onProvinceChange">
-      <option value="">请选择省份</option>
-      <option v-for="p in provinces" :key="p.code" :value="p.code">
-        {{ p.name }}
-      </option>
-    </select>
-
-    <select v-model="selectedCity" :disabled="!cities.length">
-      <option value="">请选择城市</option>
-      <option v-for="c in cities" :key="c.code" :value="c.code">
-        {{ c.name }}
-      </option>
-    </select>
-  </div>
-
-  <input v-model="dropOffPoint" placeholder="请输入终点"/>
-  <br>
-
-  <button @click = "handleSubmitOrder">提交信息</button>
-
-  <div class="timeRange">
-    <el-date-picker
-      v-model="timeRange"
-      type="datetimerange"
-      start-placeholder="开始时间"
-      end-placeholder="结束时间"
-      format="yyyy-MM-dd HH:mm:ss"
-      value-format="yyyy-MM-dd HH:mm:ss"
+    <input
+      v-model="boardingPoint"
+      :disabled="!cities1.length"
+      placeholder="请输入上车点"
     />
+
+    <button
+      type="button"
+      :disabled="!boardingCityName || !boardingPoint.trim() || boardingSearching"
+      @click="searchBoardingPlace"
+    >
+      {{ boardingSearching ? '搜索中...' : '搜索地点' }}
+    </button>
+
+    <ul v-if="boardingCandidates.length" class="candidate-list">
+      <li
+        v-for="(item, i) in boardingCandidates"
+        :key="i"
+        @click="selectBoardingPlace(item)"
+      >
+        <div>{{ item.name }}</div>
+        <div>{{ item.address }}</div>
+        <div>{{ item.lng }}, {{ item.lat }}</div>
+      </li>
+    </ul>
+
+    <p v-if="boardingExact" class="selected-tip">
+      已选起点：{{ boardingExact.name }}
+      （{{ boardingExact.lng }}, {{ boardingExact.lat }}）
+    </p>
+
+    <div class="selector2">
+      <select v-model="selectedProvince2" @change="onProvince2Change">
+        <option value="">请选择省份</option>
+        <option v-for="p in provinces" :key="p.code" :value="p.code">
+          {{ p.name }}
+        </option>
+      </select>
+
+      <select v-model="selectedCity2" :disabled="!cities2.length">
+        <option value="">请选择城市</option>
+        <option v-for="c in cities2" :key="c.code" :value="c.code">
+          {{ c.name }}
+        </option>
+      </select>
+    </div>
+
+    <input v-model="dropOffPoint" placeholder="请输入终点"/>
+
+    <div class="timeRange">
+      <el-date-picker
+        v-model="timeRange"
+        type="datetimerange"
+        start-placeholder="开始时间"
+        end-placeholder="结束时间"
+        format="YYYY-MM-DD HH:mm:ss"
+        value-format="YYYY-MM-DD HH:mm:ss"
+      />
+    </div>
   </div>
-
-
 </template>
 
 <style scoped>
