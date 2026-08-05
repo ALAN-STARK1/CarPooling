@@ -1,40 +1,44 @@
 <script setup>
-import {ref,computed} from "vue"
-
-import {login} from "../api/user.js"
-
-import {useRouter} from "vue-router"
-
-import {suggestPlaces} from "@/api/map";
+import { computed, ref } from "vue"
+import { suggestPlaces } from "@/api/map"
+import {baiduMapService} from "@/utils/baiduMapService";
 
 const boardingPoint = ref("")
-
 const dropOffPoint = ref("")
-
-const router = useRouter()
-
 const timeRange = ref([])
 
 const selectedProvince1 = ref("")
-
 const selectedCity1 = ref("")
-
 const selectedProvince2 = ref("")
-
 const selectedCity2 = ref("")
 
-// 候选列表
 const boardingCandidates = ref([])
-// 精确起点
+const dropOffCandidates = ref([])
 const boardingExact = ref(null)
-
+const dropOffExact = ref(null)
 const boardingSearching = ref(false)
+const dropOffSearching = ref(false)
+
+const wayTime = ref(null)
+
+// 用户可调：候选框一次可见条数、每次搜索最多保留条数
+const candidateWindowSize = ref(4)
+const searchResultLimit = ref(10)
+
+const visibleCandidateCount = computed(() =>
+  Math.min(10, Math.max(1, Number(candidateWindowSize.value) || 4))
+)
+const resultLimitCount = computed(() =>
+  Math.min(20, Math.max(1, Number(searchResultLimit.value) || 10))
+)
+const candidateListStyle = computed(() => ({
+  maxHeight: `${visibleCandidateCount.value * 92}px`
+}))
 
 const provinces = computed(() =>
   Object.entries(data).map(([code, v]) => ({ code, name: v.name }))
 )
 
-/** 上车点：当前省下的城市列表 */
 const cities1 = computed(() => {
   if (!selectedProvince1.value) return []
   return Object.entries(data[selectedProvince1.value].cities).map(
@@ -42,7 +46,6 @@ const cities1 = computed(() => {
   )
 })
 
-/** 下车点：当前省下的城市列表 */
 const cities2 = computed(() => {
   if (!selectedProvince2.value) return []
   return Object.entries(data[selectedProvince2.value].cities).map(
@@ -50,104 +53,129 @@ const cities2 = computed(() => {
   )
 })
 
-/** 传给百度的城市名，如「上海」 */
 const boardingCityName = computed(() => {
-  if (!selectedProvince1.value || !selectedCity1.value) return ''
-  return data[selectedProvince1.value].cities[selectedCity1.value] || ''
+  if (!selectedProvince1.value || !selectedCity1.value) return ""
+  return data[selectedProvince1.value].cities[selectedCity1.value] || ""
 })
 
-function onProvince1Change() {
-  selectedCity1.value = ''
+const dropOffCityName = computed(() => {
+  if (!selectedProvince2.value || !selectedCity2.value) return ""
+  return data[selectedProvince2.value].cities[selectedCity2.value] || ""
+})
+
+function clearBoardingSelection() {
   boardingCandidates.value = []
   boardingExact.value = null
+}
+
+function clearDropOffSelection() {
+  dropOffCandidates.value = []
+  dropOffExact.value = null
+}
+
+function onProvince1Change() {
+  selectedCity1.value = ""
+  clearBoardingSelection()
 }
 
 function onProvince2Change() {
-  selectedCity2.value = ''
+  selectedCity2.value = ""
+  clearDropOffSelection()
 }
 
-async function searchDropOffPlace() {
-  if(!DropOffCityName.value){
-    {alert('请先选择省市');return}
+function normalizeSettings() {
+  candidateWindowSize.value = visibleCandidateCount.value
+  searchResultLimit.value = resultLimitCount.value
+}
+
+async function calculateDistance() {
+  if (!boardingExact.value || !dropOffExact.value) {
+    alert('请先从候选列表中选定起点和终点')
+    return
   }
-  if(!DropOffPoint.value.trim()){
-    alert('请输入上车点');return
+  try {
+    wayTime.value = await baiduMapService.getEstimatedDuration(
+      boardingExact.value,
+      dropOffExact.value
+    )
+  } catch (e) {
+    wayTime.value = null
+    alert(e.message || '预估时长计算失败')
+  }
+}
+
+async function searchPlace(pointRef, cityName, candidatesRef, exactRef, searchingRef, label) {
+  if (!cityName) {
+    alert(`请先选择${label}所在省市`)
+    return
+  }
+  const keyword = pointRef.value.trim()
+  if (!keyword) {
+    alert(`请输入${label}`)
+    return
   }
 
-  dropOffSearching.value = true
-  boardingExact.value = null
-  boardingCandidates.value = []
+  searchingRef.value = true
+  exactRef.value = null
+  candidatesRef.value = []
+  normalizeSettings()
 
-  try{
-    const res = await suggestPlaces(boardingPoint.value.trim(),boardingCityName.value)
+  try {
+    const res = await suggestPlaces(keyword, cityName)
     const payload = res.data
-    boardingCandidates.value = payload?.success ? (payload.data || []) : []
-
-    if(!boardingCandidates.value.length) {
-      alert('未在「' + boardingCityName.value + '」找到匹配地点，请换关键词重试')
+    const places = payload?.success && Array.isArray(payload.data) ? payload.data : []
+    candidatesRef.value = places.slice(0, resultLimitCount.value)
+    if (!candidatesRef.value.length) {
+      alert(`未在「${cityName}」找到匹配地点，请换关键词重试`)
     }
   } catch (e) {
-    boardingCandidates.value = []
-    alert('搜索失败，请稍后重试')
+    candidatesRef.value = []
+    alert(`${label}搜索失败，请稍后重试`)
   } finally {
-    boardingSearching.value = false
+    searchingRef.value = false
   }
-
 }
 
-function selectBoardingPlace(item) {
-  boardingExact.value = {
+function searchBoardingPlace() {
+  return searchPlace(
+    boardingPoint,
+    boardingCityName.value,
+    boardingCandidates,
+    boardingExact,
+    boardingSearching,
+    "起点"
+  )
+}
+
+function searchDropOffPlace() {
+  return searchPlace(
+    dropOffPoint,
+    dropOffCityName.value,
+    dropOffCandidates,
+    dropOffExact,
+    dropOffSearching,
+    "终点"
+  )
+}
+
+function toExactPlace(item) {
+  return {
     name: item.name,
     address: item.address,
     lng: item.lng,
-    lat:item.lat,
-    city:item.city,
+    lat: item.lat,
+    city: item.city
   }
-  boardingPoint.value = item.name
-  // boardingCandidates.value = []
-
-}
-
-async function searchBoardingPlace() {
-  if(!boardingCityName.value){
-    {alert('请先选择省市');return}
-  }
-  if(!boardingPoint.value.trim()){
-    alert('请输入上车点');return
-  }
-
-  boardingSearching.value = true
-  boardingExact.value = null
-  boardingCandidates.value = []
-
-  try{
-    const res = await suggestPlaces(boardingPoint.value.trim(),boardingCityName.value)
-    const payload = res.data
-    boardingCandidates.value = payload?.success ? (payload.data || []) : []
-
-    if(!boardingCandidates.value.length) {
-      alert('未在「' + boardingCityName.value + '」找到匹配地点，请换关键词重试')
-    }
-  } catch (e) {
-    boardingCandidates.value = []
-    alert('搜索失败，请稍后重试')
-  } finally {
-    boardingSearching.value = false
-  }
-
 }
 
 function selectBoardingPlace(item) {
-  boardingExact.value = {
-    name: item.name,
-    address: item.address,
-    lng: item.lng,
-    lat:item.lat,
-    city:item.city,
-  }
+  boardingExact.value = toExactPlace(item)
   boardingPoint.value = item.name
-  // boardingCandidates.value = []
+}
 
+function selectDropOffPlace(item) {
+  dropOffExact.value = toExactPlace(item)
+  dropOffPoint.value = item.name
 }
 
 
@@ -595,6 +623,31 @@ const data = {
 
 <template>
   <div class="home-page">
+    <div class="candidate-settings">
+      <label>
+        候选框可见条数
+        <input
+          v-model.number="candidateWindowSize"
+          type="number"
+          min="1"
+          max="10"
+          @change="normalizeSettings"
+        />
+      </label>
+      <label>
+        单次结果上限
+        <input
+          v-model.number="searchResultLimit"
+          type="number"
+          min="1"
+          max="20"
+          @change="normalizeSettings"
+        />
+      </label>
+    </div>
+
+    <section class="place-section">
+      <h3>选择起点</h3>
     <div class="selector1">
       <select v-model="selectedProvince1" @change="onProvince1Change">
         <option value="">请选择省份</option>
@@ -603,7 +656,7 @@ const data = {
         </option>
       </select>
 
-      <select v-model="selectedCity1" :disabled="!cities1.length">
+      <select v-model="selectedCity1" :disabled="!cities1.length" @change="clearBoardingSelection">
         <option value="">请选择城市</option>
         <option v-for="c in cities1" :key="c.code" :value="c.code">
           {{ c.name }}
@@ -615,6 +668,7 @@ const data = {
       v-model="boardingPoint"
       :disabled="!cities1.length"
       placeholder="请输入上车点"
+      @input="boardingExact = null"
     />
 
     <button
@@ -625,15 +679,20 @@ const data = {
       {{ boardingSearching ? '搜索中...' : '搜索地点' }}
     </button>
 
-    <ul v-if="boardingCandidates.length" class="candidate-list">
+    <ul
+      v-if="boardingCandidates.length"
+      class="candidate-list"
+      :style="candidateListStyle"
+    >
       <li
         v-for="(item, i) in boardingCandidates"
-        :key="i"
+        :key="`${item.lng}-${item.lat}-${i}`"
+        :class="{ selected: boardingExact?.lng === item.lng && boardingExact?.lat === item.lat }"
         @click="selectBoardingPlace(item)"
       >
-        <div>{{ item.name }}</div>
-        <div>{{ item.address }}</div>
-        <div>{{ item.lng }}, {{ item.lat }}</div>
+        <strong>{{ item.name }}</strong>
+        <span>{{ item.address }}</span>
+        <small>{{ item.lng }}, {{ item.lat }}</small>
       </li>
     </ul>
 
@@ -641,7 +700,10 @@ const data = {
       已选起点：{{ boardingExact.name }}
       （{{ boardingExact.lng }}, {{ boardingExact.lat }}）
     </p>
+    </section>
 
+    <section class="place-section">
+      <h3>选择终点</h3>
     <div class="selector2">
       <select v-model="selectedProvince2" @change="onProvince2Change">
         <option value="">请选择省份</option>
@@ -650,7 +712,7 @@ const data = {
         </option>
       </select>
 
-      <select v-model="selectedCity2" :disabled="!cities2.length">
+      <select v-model="selectedCity2" :disabled="!cities2.length" @change="clearDropOffSelection">
         <option value="">请选择城市</option>
         <option v-for="c in cities2" :key="c.code" :value="c.code">
           {{ c.name }}
@@ -658,7 +720,56 @@ const data = {
       </select>
     </div>
 
-    <input v-model="dropOffPoint" placeholder="请输入终点"/>
+    <input
+      v-model="dropOffPoint"
+      :disabled="!cities2.length"
+      placeholder="请输入终点"
+      @input="dropOffExact = null"
+    />
+
+    <button
+      type="button"
+      :disabled="!dropOffCityName || !dropOffPoint.trim() || dropOffSearching"
+      @click="searchDropOffPlace"
+    >
+      {{ dropOffSearching ? '搜索中...' : '搜索地点' }}
+    </button>
+
+    <button
+      type="button"
+      :disabled="!boardingExact || !dropOffExact"
+      @click="calculateDistance"
+    >
+      计算预估时长
+    </button>
+
+    <p v-if="wayTime" class="selected-tip">
+      预估到达时长：{{ wayTime.durationText }}
+      （约 {{ wayTime.durationMinutes }} 分钟 / {{ wayTime.durationSeconds }} 秒）
+    </p>
+
+    <ul
+      v-if="dropOffCandidates.length"
+      class="candidate-list"
+      :style="candidateListStyle"
+    >
+      <li
+        v-for="(item, i) in dropOffCandidates"
+        :key="`${item.lng}-${item.lat}-${i}`"
+        :class="{ selected: dropOffExact?.lng === item.lng && dropOffExact?.lat === item.lat }"
+        @click="selectDropOffPlace(item)"
+      >
+        <strong>{{ item.name }}</strong>
+        <span>{{ item.address }}</span>
+        <small>{{ item.lng }}, {{ item.lat }}</small>
+      </li>
+    </ul>
+
+    <p v-if="dropOffExact" class="selected-tip">
+      已选终点：{{ dropOffExact.name }}
+      （{{ dropOffExact.lng }}, {{ dropOffExact.lat }}）
+    </p>
+    </section>
 
     <div class="timeRange">
       <el-date-picker
@@ -674,5 +785,97 @@ const data = {
 </template>
 
 <style scoped>
+.home-page {
+  width: min(720px, calc(100% - 32px));
+  margin: 24px auto;
+  color: #1f2937;
+}
 
+.candidate-settings,
+.place-section {
+  margin-bottom: 18px;
+  padding: 16px;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.candidate-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.candidate-settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.candidate-settings input {
+  width: 64px;
+}
+
+.place-section h3 {
+  margin: 0 0 12px;
+}
+
+.selector1,
+.selector2 {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.place-section > input {
+  width: min(420px, 65%);
+  margin-right: 8px;
+}
+
+select,
+input,
+button {
+  min-height: 34px;
+  box-sizing: border-box;
+}
+
+.candidate-list {
+  margin: 12px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid #d7dee8;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.candidate-list li {
+  min-height: 92px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid #edf1f5;
+  cursor: pointer;
+}
+
+.candidate-list li:last-child {
+  border-bottom: 0;
+}
+
+.candidate-list li:hover,
+.candidate-list li.selected {
+  background: #edf6ff;
+}
+
+.candidate-list span,
+.candidate-list small {
+  color: #64748b;
+}
+
+.selected-tip {
+  margin-bottom: 0;
+  color: #087f5b;
+}
 </style>
