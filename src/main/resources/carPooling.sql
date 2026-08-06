@@ -1,7 +1,8 @@
 CREATE DATABASE IF NOT EXISTS `org.example.carpooling`
     DEFAULT CHARACTER SET utf8mb4;
-USE `org.example.carpooling`;
-DROP TABLE IF EXISTS user;
+USE `carpooling`;
+DROP TABLE IF EXISTS `user`,`order`,`position`;
+
 
 
 CREATE TABLE `user`(
@@ -20,23 +21,23 @@ CREATE TABLE `user`(
 ) COMMENT='用户表';
 
 
-CREATE TABLE 'order' (
+CREATE TABLE `order` (
 
-            'id'    BIGINT  PRIMARY KEY COMMENT '主键ID',
-            'order_id'  BIGINT COMMENT '订单号',
-            'passenger_id' BIGINT COMMENT '乘客ID',
-            'driver_id' BIGINT COMMENT '司机ID',
-            'create_time' DATETIME COMMENT '创建时间',
-            'end_time'  DATETIME COMMENT '结束时间',
-            'passenger_cost' DOUBLE COMMENT '乘客花费',
-            'driver_income' DOUBLE COMMENT '司机收入'
+            id    BIGINT  PRIMARY KEY COMMENT '主键ID',
+            order_id  BIGINT COMMENT '订单号',
+            passenger_id BIGINT COMMENT '乘客ID',
+            driver_id BIGINT COMMENT '司机ID',
+            create_time DATETIME COMMENT '创建时间',
+            end_time  DATETIME COMMENT '结束时间',
+            passenger_cost DOUBLE COMMENT '乘客花费',
+            driver_income DOUBLE COMMENT '司机收入'
 
 ) COMMENT = '订单表';
 
-CREATE TABLE 'position' (
-        'id' BIGINT PRIMARY KEY  COMMENT '主键ID',
-        'city' VARCHAR(20) COMMENT '城市',
-        'name' VARCHAR(20) COMMENT '名字',
-        'lng'   DOUBLE COMMENT '经度',
-        'lat'   DOUBLE COMMENT '纬度'
+CREATE TABLE `position` (
+        id BIGINT PRIMARY KEY  COMMENT '主键ID',
+        city VARCHAR(20) COMMENT '城市',
+        name VARCHAR(20) COMMENT '名字',
+        lng   DOUBLE COMMENT '经度',
+        lat  DOUBLE COMMENT '纬度'
 ) COMMENT = '位置表';

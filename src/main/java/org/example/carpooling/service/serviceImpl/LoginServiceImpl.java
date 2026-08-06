@@ -89,7 +89,7 @@ public class LoginServiceImpl implements LoginService {
         data.put("token", token);
         data.put("user", userDTO);
 
-        return Result.ok(data);
+        return Result.ok(token);
 
     }
 
