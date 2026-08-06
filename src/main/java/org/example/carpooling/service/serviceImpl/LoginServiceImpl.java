@@ -1,4 +1,4 @@
-package org.example.carpooling.service.LoginServiceImpl;
+package org.example.carpooling.service.serviceImpl;
 
 import cn.hutool.core.util.IdUtil;
 import org.example.carpooling.constants.RedisConstants;

@@ -1,14 +1,24 @@
 package org.example.carpooling.entity;
 
+import cn.hutool.core.date.DateTime;
 import lombok.Data;
 
 import java.util.Date;
 
 @Data
-public abstract class Order {
-    Long id;
-    String state;
+public  class Order {
 
-    Date creationDate;
-    Date endDate;
+    Long id;
+    Position startPosition;
+    Position endPosition;
+    Long passengerId;
+    Long driverId;
+    DateTime createTime;
+    DateTime updateTime;
+    DateTime endTime;
+    double passengerCost;
+    double driverIncome;
+    Long boardingPlaceId;
+    Long dropOffPlaceId;
+
 }

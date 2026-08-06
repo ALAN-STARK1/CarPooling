@@ -4,7 +4,7 @@ USE `org.example.carpooling`;
 DROP TABLE IF EXISTS user;
 
 
-CREATE TABLE `user` (
+CREATE TABLE `user`(
                         `id`            BIGINT          PRIMARY KEY COMMENT '主键ID',
                         `username`      VARCHAR(32)     NOT NULL UNIQUE COMMENT '用户名',
                         sex             VARCHAR(32)     COMMENT '性别',
@@ -15,57 +15,28 @@ CREATE TABLE `user` (
                         `avatar`        VARCHAR(255)    COMMENT '头像URL',
                         `status`        TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：0-禁用 1-正常',
                         `role`          ENUM('user','driver','admin') NOT NULL DEFAULT 'user' COMMENT '角色',
-
                         INDEX `idx_phone` (`phoneNumber`),
                         INDEX `idx_status` (`status`)
 ) COMMENT='用户表';
 
 
+CREATE TABLE 'order' (
 
+            'id'    BIGINT  PRIMARY KEY COMMENT '主键ID',
+            'order_id'  BIGINT COMMENT '订单号',
+            'passenger_id' BIGINT COMMENT '乘客ID',
+            'driver_id' BIGINT COMMENT '司机ID',
+            'create_time' DATETIME COMMENT '创建时间',
+            'end_time'  DATETIME COMMENT '结束时间',
+            'passenger_cost' DOUBLE COMMENT '乘客花费',
+            'driver_income' DOUBLE COMMENT '司机收入'
 
--- 行程表
-CREATE TABLE `trip` (
-                        `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        `driver_id` BIGINT NOT NULL COMMENT '司机ID',
-                        `start_lng` DECIMAL(10,7) NOT NULL COMMENT '起点经度',
-                        `start_lat` DECIMAL(10,7) NOT NULL COMMENT '起点纬度',
-                        `start_address` VARCHAR(255) COMMENT '起点地址',
-                        `end_lng` DECIMAL(10,7) NOT NULL COMMENT '终点经度',
-                        `end_lat` DECIMAL(10,7) NOT NULL COMMENT '终点纬度',
-                        `end_address` VARCHAR(255) COMMENT '终点地址',
-                        `route_path` JSON COMMENT '路线路径点',
-                        `distance` INT COMMENT '总距离(米)',
-                        `duration` INT COMMENT '预计时间(秒)',
-                        `depart_time` DATETIME NOT NULL COMMENT '出发时间',
-                        `seats_total` TINYINT NOT NULL DEFAULT 4 COMMENT '总座位',
-                        `seats_left` TINYINT NOT NULL DEFAULT 4 COMMENT '剩余座位',
-                        `price` DECIMAL(10,2) COMMENT '每人价格',
-                        `status` TINYINT DEFAULT 0 COMMENT '0-发布中 1-进行中 2-已完成 3-已取消',
-                        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        INDEX `idx_depart_time` (`depart_time`),
-                        INDEX `idx_status` (`status`)
-) COMMENT='行程表';
+) COMMENT = '订单表';
 
--- 预订表
-CREATE TABLE `booking` (
-                           `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-                           `trip_id` BIGINT NOT NULL,
-                           `passenger_id` BIGINT NOT NULL,
-                           `pickup_lng` DECIMAL(10,7) COMMENT '上车点经度',
-                           `pickup_lat` DECIMAL(10,7) COMMENT '上车点纬度',
-                           `dropoff_lng` DECIMAL(10,7) COMMENT '下车点经度',
-                           `dropoff_lat` DECIMAL(10,7) COMMENT '下车点纬度',
-                           `status` TINYINT DEFAULT 0 COMMENT '0-待确认 1-已确认 2-已取消',
-                           `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
-) COMMENT='预订表';
-
--- 实时位置表（Redis 存储更合适，这里做备份）
-CREATE TABLE `location_log` (
-                                `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                `trip_id` BIGINT NOT NULL,
-                                `user_id` BIGINT NOT NULL,
-                                `lng` DECIMAL(10,7) NOT NULL,
-                                `lat` DECIMAL(10,7) NOT NULL,
-                                `recorded_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                                INDEX `idx_trip_time` (`trip_id`, `recorded_at`)
-) COMMENT='位置记录表';
+CREATE TABLE 'position' (
+        'id' BIGINT PRIMARY KEY  COMMENT '主键ID',
+        'city' VARCHAR(20) COMMENT '城市',
+        'name' VARCHAR(20) COMMENT '名字',
+        'lng'   DOUBLE COMMENT '经度',
+        'lat'   DOUBLE COMMENT '纬度'
+) COMMENT = '位置表';
