@@ -25,12 +25,15 @@ CREATE TABLE `order` (
 
             id    BIGINT  PRIMARY KEY COMMENT '主键ID',
             order_id  BIGINT COMMENT '订单号',
+            boardingPosition_id BIGINT COMMENT '出发点ID',
+            dropOffPosition_id BIGINT COMMENT '下车点ID',
             passenger_id BIGINT COMMENT '乘客ID',
             driver_id BIGINT COMMENT '司机ID',
             create_time DATETIME COMMENT '创建时间',
             end_time  DATETIME COMMENT '结束时间',
             passenger_cost DOUBLE COMMENT '乘客花费',
             driver_income DOUBLE COMMENT '司机收入'
+
 
 ) COMMENT = '订单表';
 

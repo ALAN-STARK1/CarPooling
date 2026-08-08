@@ -35,37 +35,48 @@
 
   }
 
-  function handleLogin() {
-
-    login({
-      username: username.value,
-      password: password.value,
-    })
-    .then(res => {
+  async function handleLogin() {
+    try {
+      const res = await login({
+        username: username.value,
+        password: password.value,
+      })
       const result = res.data
-      if (result.success) {
-        message.value = "登录成功"
-        const data = result.data
-
-        localStorage.setItem("user_token", data.token)
-        localStorage.setItem("user_info", JSON.stringify(data.user))
-        alert('登录成功')
-
-        router.push("/home")
-      } else {
-        message.value = result.errorMsg || "用户名或密码错误";
+      if (!result.success) {
+        message.value = result.errorMsg || "用户名或密码错误"
+        return
       }
-    })
-    .catch(error => {
-      console.log("登录异常：",error);
-      message.value = "系统繁忙，登录失败"
-    })
 
-  }
+      const data = result.data
+      const token = typeof data === "string" ? data : data?.token
+      const user = typeof data === "string" ? null : data?.user
 
+      if (!token) {
+        message.value = "登录成功但未返回 token"
+        return
+      }
 
+      localStorage.setItem("user_token", token)
+      if (user) {
+        localStorage.setItem("user_info", JSON.stringify(user))
+      }
 
-</script>
+      message.value = "登录成功"
+      try {
+        await router.push("/home")
+      } catch (navError) {
+        console.error("首页跳转失败：", navError)
+        message.value =
+          "登录成功，但首页加载失败。请按 Ctrl+F5 强制刷新后再试。" +
+          (navError?.message ? `（${navError.message}）` : "")
+      }
+    } catch (error) {
+      console.log("登录异常：", error)
+      message.value = error?.message
+        ? `登录失败：${error.message}`
+        : "系统繁忙，登录失败"
+    }
+  }</script>
 
 <template>
 

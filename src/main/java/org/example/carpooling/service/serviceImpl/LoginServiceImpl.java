@@ -75,7 +75,7 @@ public class LoginServiceImpl implements LoginService {
         }
 
         String token = UUID.randomUUID().toString();
-        String key = RedisConstants.LOGIN_USER_KEY + token;
+        String key = RedisConstants.LOGIN_USER_KEY + ":" + token;
 
         //存入redis
         Map<String,String> userMap = new HashMap<>();
@@ -89,7 +89,7 @@ public class LoginServiceImpl implements LoginService {
         data.put("token", token);
         data.put("user", userDTO);
 
-        return Result.ok(token);
+        return Result.ok(data);
 
     }
 

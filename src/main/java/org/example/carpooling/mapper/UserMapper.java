@@ -8,6 +8,7 @@ import org.example.carpooling.entity.User;
 @Mapper
 public interface UserMapper {
 
+
     void insert(User user);
 
     User getUser(int id);

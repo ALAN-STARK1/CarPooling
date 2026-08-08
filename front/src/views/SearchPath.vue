@@ -633,7 +633,6 @@ const data = {
       <label>
         候选框可见条数
         <input
-          v-model.number="candidateWindowSize"
           type="number"
           min="1"
           max="10"

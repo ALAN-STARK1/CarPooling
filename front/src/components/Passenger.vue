@@ -29,6 +29,9 @@ async function handleSubmitOrder() {
   submitting.value = true
   try {
     const res = await submitOrder({
+
+      submitType: '乘客',
+
       boardingExact: {
         name: boarding.name,
         city: boarding.city,
@@ -53,6 +56,7 @@ async function handleSubmitOrder() {
   } finally {
     submitting.value = false
   }
+
 }
 
 </script>

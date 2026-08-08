@@ -9,8 +9,9 @@ import java.util.Date;
 public  class Order {
 
     Long id;
-    Position startPosition;
-    Position endPosition;
+    Long orderId;
+    Long boardingPositionId;
+    Long dropOffPositionId;
     Long passengerId;
     Long driverId;
     DateTime createTime;
@@ -18,7 +19,6 @@ public  class Order {
     DateTime endTime;
     double passengerCost;
     double driverIncome;
-    Long boardingPlaceId;
-    Long dropOffPlaceId;
+
 
 }
